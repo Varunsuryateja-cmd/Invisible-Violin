@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Invisible Violin — AI Air Violin with Game Mode</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #131720;
+    --panel-sub: #1a202c;
+    --ink: #f7f9fc;
+    --muted: #8c96a8;
+    --accent: #e5a93b;
+    --accent-glow: rgba(229, 169, 59, 0.35);
+    --accent-soft: rgba(229, 169, 59, 0.15);
+    --accent2: #4fd1c5;
+    --accent2-glow: rgba(79, 209, 197, 0.35);
+    --success: #10b981;
+    --success-glow: rgba(16, 185, 129, 0.4);
+    --line: #242c3d;
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --radius-sm: 6px;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f4ef;
+    --panel: #ffffff;
+    --panel-sub: #f0ede4;
+    --ink: #14171f;
+    --muted: #647087;
+    --accent: #c4821a;
+    --accent-glow: rgba(196, 130, 26, 0.25);
+    --accent-soft: rgba(196, 130, 26, 0.12);
+    --accent2: #0d9488;
+    --accent2-glow: rgba(13, 148, 136, 0.25);
+    --success: #059669;
+    --success-glow: rgba(5, 150, 105, 0.3);
+    --line: #e2ded4;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+
+  header {
+    text-align: center;
+    max-width: 680px;
+    width: 100%;
+    position: relative;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, #fce096, var(--accent), #ff9800);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .badge-tag {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: 6px 0 0;
+    line-height: 1.4;
+  }
+  .theme-btn {
+    background: var(--panel-sub);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: all 0.2s ease;
+  }
+  .theme-btn:hover {
+    border-color: var(--accent);
+  }
+
+  /* Main Container Layout */
+  .app-container {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Stage & Video */
+  .stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #000;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 40px -10px rgba(0,0,0,0.5);
+  }
+  video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+  }
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+    pointer-events: none;
+  }
+  .hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px;
+    z-index: 5;
+  }
+  .hud-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .badge {
+    background: rgba(15, 18, 26, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--ink);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  /* Target Note HUD overlay */
+  .target-hud {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: rgba(19, 23, 32, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 24px var(--accent-glow);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    transition: all 0.25s ease;
+  }
+  .target-hud.matching {
+    border-color: var(--success);
+    box-shadow: 0 0 30px var(--success-glow);
+    transform: scale(1.04);
+  }
+  .target-hud-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .target-hud-note {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .target-hud.matching .target-hud-note {
+    color: var(--success);
+  }
+  .target-progress-bar {
+    width: 80px;
+    height: 5px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .target-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--success);
+    transition: width 0.05s linear;
+  }
+
+  /* Left Hand Fingerboard Note Guide */
+  .fingerboard-guide {
+    position: absolute;
+    left: 8px;
+    top: 48px;
+    bottom: 48px;
+    width: 46px;
+    background: rgba(15, 18, 26, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-between;
+    padding: 6px 2px;
+    pointer-events: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .fret-marker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 2px 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-radius: 4px;
+  }
+  .fret-marker:hover {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .fret-marker.active {
+    color: #fff;
+    font-weight: 800;
+    background: rgba(79, 209, 197, 0.4);
+    border: 1px solid var(--accent2);
+  }
+  .fret-marker.target {
+    color: #ffde59;
+    background: rgba(229, 169, 59, 0.35);
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .fret-marker.target.active {
+    color: #fff;
+    background: rgba(16, 185, 129, 0.5);
+    border: 1px solid var(--success);
+    box-shadow: 0 0 10px var(--success-glow);
+  }
+
+  /* Pitch Alignment Indicator inside stage */
+  .pitch-indicator-hud {
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 18, 26, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .pitch-indicator-arrow {
+    font-size: 1rem;
+    transition: transform 0.1s ease;
+  }
+
+  /* Controls Panel */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+
+  .nav-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--panel-sub);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+  }
+  .nav-tab {
+    flex: 1;
+    padding: 8px 12px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s ease;
+  }
+  .nav-tab.active {
+    background: var(--accent);
+    color: #141005;
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  button.btn {
+    background: var(--accent);
+    color: #1a1208;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+  }
+  button.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px var(--accent-glow);
+  }
+  button.btn.secondary {
+    background: var(--panel-sub);
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  button.btn.secondary:hover:not(:disabled) {
+    background: var(--line);
+    box-shadow: none;
+  }
+  button.btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    transform: none;
+  }
+
+  select {
+    background: var(--panel-sub);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+  }
+  select:focus {
+    border-color: var(--accent);
+  }
+
+  /* Meters */
+  .meter-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 540px) {
+    .meter-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .meter-box {
+    background: var(--panel-sub);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .meter-label {
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .meter-val {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .meter {
+    height: 8px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .meter > div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    width: 0%;
+    transition: width 0.05s linear;
+  }
+  #bowMeter > div {
+    background: linear-gradient(90deg, #3b82f6, var(--accent2));
+  }
+
+  /* Game Stats Panel */
+  .game-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: var(--panel-sub);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 12px;
+  }
+  @media (max-width: 500px) {
+    .game-stats-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .stat-card {
+    text-align: center;
+  }
+  .stat-title {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .stat-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+  .stat-number.green { color: var(--success); }
+  .stat-number.cyan { color: var(--accent2); }
+
+  .status-bar {
+    font-size: 0.82rem;
+    color: var(--muted);
+    background: var(--panel-sub);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Simulator panel for instant testing */
+  .sim-panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sim-header {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    justify-content: space-between;
+  }
+  .sim-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .sim-btn {
+    background: var(--panel-sub);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .sim-btn:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .instructions {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    width: 100%;
+    max-width: 760px;
+  }
+  .instructions ul {
+    margin: 6px 0 0;
+    padding-left: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="theme-btn" id="themeToggle" title="Toggle Light/Dark Theme">🌓</button>
+  <div class="title-row">
+    <h1>🎻 Invisible Violin</h1>
+    <span class="badge-tag">AI Pitch Tracking</span>
+  </div>
+  <p class="sub">Left hand height controls pitch (smoothed moving average). Right hand bow speed controls volume & dynamics.</p>
+</header>
+
+<div class="app-container">
+  <!-- Stage Display -->
+  <div class="stage" id="stageEl">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="overlay"></canvas>
+    
+    <!-- Fingerboard guide overlay on stage left -->
+    <div class="fingerboard-guide" id="fingerboardGuide">
+      <!-- Generated dynamically based on scale -->
+    </div>
+
+    <!-- HUD Overlay -->
+    <div class="hud">
+      <div class="hud-top">
+        <div class="badge" id="badge">Waiting for camera…</div>
+        
+        <!-- Target Note Card in HUD -->
+        <div class="target-hud" id="targetHud">
+          <div class="target-hud-title" id="targetHudTitle">Target Note</div>
+          <div class="target-hud-note" id="targetHudNote">D4</div>
+          <div class="target-progress-bar">
+            <div class="target-progress-fill" id="targetProgressFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pitch alignment feedback -->
+      <div class="pitch-indicator-hud" id="pitchFeedbackHud">
+        <span class="pitch-indicator-arrow" id="pitchArrow">🎯</span>
+        <span id="pitchFeedbackText">Mode: D Major (Snapped)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Control Panel -->
+  <div class="panel">
+    <!-- Mode Switcher -->
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tabGame" onclick="setAppMode('game')">🎯 Match the Note Game</button>
+      <button class="nav-tab" id="tabFree" onclick="setAppMode('free')">🎻 Free Play</button>
+    </div>
+
+    <!-- Main action bar -->
+    <div class="row">
+      <button class="btn" id="startBtn">📷 Start Camera</button>
+      <button class="btn secondary" id="soundBtn" disabled>🔊 Enable Sound</button>
+      <select id="scaleSelect" aria-label="Musical Scale">
+        <option value="major" selected>D Major scale (snapped)</option>
+        <option value="minor">D Minor scale (snapped)</option>
+        <option value="chromatic">Free pitch (glissando)</option>
+      </select>
+      <button class="btn secondary" id="nextTargetBtn">🎲 New Note</button>
+      <button class="btn secondary" id="resetScoreBtn" title="Reset score to 0">🔄 Reset</button>
+    </div>
+
+    <!-- Game Stats Bar -->
+    <div class="game-stats-row" id="gameStatsRow">
+      <div class="stat-card">
+        <div class="stat-title">Score</div>
+        <div class="stat-number green" id="scoreVal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Streak</div>
+        <div class="stat-number" id="streakVal">0x</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Target Note</div>
+        <div class="stat-number cyan" id="targetStatVal">D4</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Best Score</div>
+        <div class="stat-number" id="bestScoreVal">0</div>
+      </div>
+    </div>
+
+    <!-- Live Meters -->
+    <div class="meter-container">
+      <div class="meter-box">
+        <div class="meter-label">
+          <span>Pitch (Left Hand Height)</span>
+          <span class="meter-val" id="pitchLabel">—</span>
+        </div>
+        <div class="meter"><div id="pitchMeter"></div></div>
+      </div>
+      <div class="meter-box">
+        <div class="meter-label">
+          <span>Bow / Volume (Right Hand Motion)</span>
+          <span class="meter-val" id="bowLabel">—</span>
+        </div>
+        <div class="meter" id="bowMeter"><div></div></div>
+      </div>
+    </div>
+
+    <!-- Status message -->
+    <div class="status-bar" id="status">
+      👉 1. Click <strong>Start Camera</strong>. 2. Click <strong>Enable Sound</strong>. 3. Raise both hands to play!
+    </div>
+
+    <!-- Quick Simulation & Testing Helper Bar (useful for testing or no-webcam environments) -->
+    <div class="sim-panel">
+      <div class="sim-header">
+        <span>🎮 Interactive / Test Simulator Controls</span>
+        <span id="simStatus">Click notes or press keys 1-8 to test</span>
+      </div>
+      <div class="sim-buttons" id="simNotesContainer">
+        <!-- populated via js -->
+      </div>
+    </div>
+  </div>
+
+  <div class="instructions">
+    <strong>How to Play:</strong>
+    <ul>
+      <li><strong>Pitch Hand (Left Hand):</strong> Raise or lower your left hand. Landmark data is smoothed with a moving average buffer so notes remain solid and jitter-free.</li>
+      <li><strong>Bow Hand (Right Hand):</strong> Move your right hand horizontally back and forth like drawing a violin bow across strings. Faster motion increases tone loudness and brilliance. When your bow stops, the sound fades naturally to silence.</li>
+      <li><strong>Match the Note Game:</strong> Position your left hand to hit the glowing target note (e.g. <code>D4</code>, <code>A4</code>) and draw the bow. Hold the pitch steady for a moment to score points and build a streak combo!</li>
+      <li><strong>Pinch to Mute:</strong> Touch your left thumb and index finger together to instantly mute the violin string.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Libraries: Tone.js, MediaPipe Hands, Camera Utils -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<script>
+(function(){
+  // DOM Elements
+  const videoEl = document.getElementById('video');
+  const canvasEl = document.getElementById('overlay');
+  const ctx = canvasEl.getContext('2d');
+  const badge = document.getElementById('badge');
+  const startBtn = document.getElementById('startBtn');
+  const soundBtn = document.getElementById('soundBtn');
+  const scaleSelect = document.getElementById('scaleSelect');
+  const nextTargetBtn = document.getElementById('nextTargetBtn');
+  const resetScoreBtn = document.getElementById('resetScoreBtn');
+  const pitchMeter = document.getElementById('pitchMeter');
+  const bowMeter = document.getElementById('bowMeter').firstElementChild;
+  const pitchLabel = document.getElementById('pitchLabel');
+  const bowLabel = document.getElementById('bowLabel');
+  const statusEl = document.getElementById('status');
+  const themeToggle = document.getElementById('themeToggle');
+  
+  // Game & HUD Elements
+  const targetHud = document.getElementById('targetHud');
+  const targetHudNote = document.getElementById('targetHudNote');
+  const targetProgressFill = document.getElementById('targetProgressFill');
+  const pitchArrow = document.getElementById('pitchArrow');
+  const pitchFeedbackText = document.getElementById('pitchFeedbackText');
+  const scoreVal = document.getElementById('scoreVal');
+  const streakVal = document.getElementById('streakVal');
+  const targetStatVal = document.getElementById('targetStatVal');
+  const bestScoreVal = document.getElementById('bestScoreVal');
+  const gameStatsRow = document.getElementById('gameStatsRow');
+  const fingerboardGuide = document.getElementById('fingerboardGuide');
+  const simNotesContainer = document.getElementById('simNotesContainer');
+  const tabGame = document.getElementById('tabGame');
+  const tabFree = document.getElementById('tabFree');
+
+  // Theme Toggle Support
+  let isDarkMode = true;
+  themeToggle.addEventListener('click', () => {
+    isDarkMode = !isDarkMode;
+    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    themeToggle.textContent = isDarkMode ? '🌓' : '☀️';
+  });
+
+  // ---- Moving Average Filter Implementation for Landmark Smoothing ----
+  class MovingAverageFilter {
+    constructor(size = 5) {
+      this.size = size;
+      this.buffer = [];
+    }
+    add(val) {
+      this.buffer.push(val);
+      if (this.buffer.length > this.size) this.buffer.shift();
+      return this.get();
+    }
+    get() {
+      if (this.buffer.length === 0) return 0;
+      let sum = 0;
+      for (let i = 0; i < this.buffer.length; i++) sum += this.buffer[i];
+      return sum / this.buffer.length;
+    }
+    reset() {
+      this.buffer = [];
+    }
+    hasData() {
+      return this.buffer.length > 0;
+    }
+  }
+
+  // Moving average smoothing filters
+  const leftWristY_Filter = new MovingAverageFilter(6);
+  const leftPinch_Filter = new MovingAverageFilter(4);
+  const rightWristX_Filter = new MovingAverageFilter(4);
+
+  // ---- Audio State ----
+  let soundReady = false;
+  let synth = null;
+  let filter = null;
+  let chimeSynth = null;
+  let noteOn = false;
+
+  function setupAudio(){
+    // Master Limiter to prevent clipping
+    const limiter = new Tone.Limiter(-1).toDestination();
+
+    // Main violin filter & vibrato
+    filter = new Tone.Filter(2200, "lowpass").connect(limiter);
+    const vibrato = new Tone.Vibrato(5.2, 0.05).connect(filter);
+    
+    synth = new Tone.Synth({
+      oscillator: { type: "sawtooth" },
+      envelope: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.3 }
+    }).connect(vibrato);
+    synth.volume.value = -60;
+    synth.frequency.value = 293.66; // D4 default
+
+    // Polyphonic Chime synth for game success feedback
+    const chimeFilter = new Tone.Filter(4000, "lowpass").connect(limiter);
+    chimeSynth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: "sine" },
+      envelope: { attack: 0.01, decay: 0.25, sustain: 0.05, release: 0.4 }
+    }).connect(chimeFilter);
+    chimeSynth.volume.value = -6;
+  }
+
+  function playSuccessChime(targetMidi) {
+    if (!soundReady || !chimeSynth) return;
+    try {
+      const baseFreq = midiToFreq(targetMidi);
+      const harmony1 = midiToFreq(targetMidi + 4);
+      const harmony2 = midiToFreq(targetMidi + 7);
+      chimeSynth.triggerAttackRelease([baseFreq, harmony1, harmony2], "16n");
+    } catch(e) {
+      console.warn("Chime audio trigger error:", e);
+    }
+  }
+
+  soundBtn.addEventListener('click', async () => {
+    try {
+      await Tone.start();
+      if (!synth) setupAudio();
+      soundReady = true;
+      soundBtn.textContent = "🔊 Sound Active";
+      soundBtn.classList.remove('secondary');
+      soundBtn.disabled = true;
+      statusEl.innerHTML = "🎶 <strong>Sound active!</strong> Move your hands in front of the camera or click the simulator buttons.";
+    } catch(err) {
+      console.error(err);
+      statusEl.textContent = "Audio activation failed: " + err.message;
+    }
+  });
+
+  // ---- Scales & Pitch mapping ----
+  const MIN_FREQ = 196.00; // G3
+  const MAX_FREQ = 1567.98; // G6
+
+  const scales = {
+    // D Major scale notes: D4, E4, F#4, G4, A4, B4, C#5, D5, E5, F#5, G5, A5, B5, C#6, D6, E6
+    major: [62, 64, 66, 67, 69, 71, 73, 74, 76, 78, 79, 81, 83, 84, 86, 88],
+    minor: [62, 64, 65, 67, 69, 70, 72, 74, 76, 77, 79, 81, 82, 84, 86, 88],
+    chromatic: null
+  };
+
+  const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+
+  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+
+  function midiToNoteName(midi){
+    const name = noteNames[(midi % 12 + 12) % 12];
+    const octave = Math.floor(midi / 12) - 1;
+    return name + octave;
+  }
+
+  function freqToNoteName(f){
+    const midi = Math.round(69 + 12 * Math.log2(f / 440));
+    return midiToNoteName(midi);
+  }
+
+  function mapPitch(norm){
+    const mode = scaleSelect.value;
+    if (mode === 'chromatic'){
+      const logMin = Math.log2(MIN_FREQ), logMax = Math.log2(MAX_FREQ);
+      const logF = logMin + norm * (logMax - logMin);
+      const freq = Math.pow(2, logF);
+      const approxMidi = Math.round(69 + 12 * Math.log2(freq / 440));
+      return { freq, midi: approxMidi, noteName: freqToNoteName(freq) };
+    } else {
+      const notes = scales[mode] || scales.major;
+      const idx = Math.min(notes.length - 1, Math.max(0, Math.round(norm * (notes.length - 1))));
+      const midi = notes[idx];
+      return { freq: midiToFreq(midi), midi, noteName: midiToNoteName(midi) };
+    }
+  }
+
+  // ---- Game State & Mechanics ----
+  let appMode = 'game'; // 'game' or 'free'
+  let score = 0;
+  let streak = 0;
+  let bestScore = 0;
+  let currentTarget = null; // { midi, noteName, freq }
+  let matchProgress = 0; // 0 to 1
+  const MATCH_HOLD_TIME_SEC = 0.35; // 350ms sustained hold to trigger match
+  let currentPlayedNote = null; // { freq, midi, noteName }
+  let particles = [];
+  let floatingTexts = [];
+
+  // Update fingerboard note guide UI on scale change
+  function updateFingerboardGuide() {
+    fingerboardGuide.innerHTML = '';
+    simNotesContainer.innerHTML = '';
+    const mode = scaleSelect.value;
+    const notes = (mode === 'chromatic') ? [62,64,66,67,69,71,73,74,76,78,81,86] : (scales[mode] || scales.major);
+
+    // Limit to first 8-10 primary notes for fingerboard display clarity
+    const displayNotes = notes.slice(0, 10);
+
+    displayNotes.forEach((midi, idx) => {
+      const name = midiToNoteName(midi);
+      
+      // Fingerboard marker
+      const marker = document.createElement('div');
+      const isTarget = currentTarget && currentTarget.midi === midi;
+      const isActive = currentPlayedNote && currentPlayedNote.midi === midi;
+      marker.className = 'fret-marker' + (isTarget ? ' target' : '') + (isActive ? ' active' : '');
+      marker.dataset.midi = midi;
+      marker.textContent = name;
+      marker.title = `Click to test pitch ${name}`;
+      marker.onclick = () => simulatePitch(midi);
+      fingerboardGuide.appendChild(marker);
+
+      // Simulator quick button
+      const btn = document.createElement('button');
+      btn.className = 'sim-btn';
+      btn.textContent = `${idx + 1}: ${name}`;
+      btn.onclick = () => simulatePitchAndBow(midi);
+      simNotesContainer.appendChild(btn);
+    });
+  }
+
+  function updateFingerboardActiveMarker() {
+    const markers = fingerboardGuide.querySelectorAll('.fret-marker');
+    markers.forEach(marker => {
+      const midi = parseInt(marker.dataset.midi);
+      const isTarget = currentTarget && currentTarget.midi === midi;
+      const isActive = currentPlayedNote && currentPlayedNote.midi === midi;
+      marker.className = 'fret-marker' + (isTarget ? ' target' : '') + (isActive ? ' active' : '');
+    });
+  }
+
+  // Set new random target note from current scale
+  function pickNewTargetNote() {
+    const mode = scaleSelect.value;
+    const notes = scales[mode] || scales.major;
+    
+    // Pick a note in comfortable playable range (first 8 notes: D4 to D5)
+    const candidates = notes.slice(0, 8);
+    let newMidi = candidates[Math.floor(Math.random() * candidates.length)];
+    if (currentTarget && candidates.length > 1 && newMidi === currentTarget.midi) {
+      newMidi = candidates[(candidates.indexOf(newMidi) + 1) % candidates.length];
+    }
+    
+    currentTarget = {
+      midi: newMidi,
+      noteName: midiToNoteName(newMidi),
+      freq: midiToFreq(newMidi)
+    };
+
+    targetHudNote.textContent = currentTarget.noteName;
+    targetStatVal.textContent = currentTarget.noteName;
+    matchProgress = 0;
+    targetProgressFill.style.width = '0%';
+    targetHud.classList.remove('matching');
+
+    updateFingerboardGuide();
+  }
+
+  // Reset Score handler
+  resetScoreBtn.addEventListener('click', () => {
+    score = 0;
+    streak = 0;
+    scoreVal.textContent = '0';
+    streakVal.textContent = '0x';
+    matchProgress = 0;
+    targetProgressFill.style.width = '0%';
+    pickNewTargetNote();
+  });
+
+  // Mode switching
+  window.setAppMode = function(mode) {
+    appMode = mode;
+    if (mode === 'game') {
+      tabGame.classList.add('active');
+      tabFree.classList.remove('active');
+      targetHud.style.display = 'flex';
+      gameStatsRow.style.display = 'grid';
+      if (!currentTarget) pickNewTargetNote();
+    } else {
+      tabGame.classList.remove('active');
+      tabFree.classList.add('active');
+      targetHud.style.display = 'none';
+      gameStatsRow.style.display = 'none';
+      targetHud.classList.remove('matching');
+    }
+  };
+
+  scaleSelect.addEventListener('change', () => {
+    pickNewTargetNote();
+    updateFingerboardGuide();
+  });
+
+  nextTargetBtn.addEventListener('click', () => {
+    pickNewTargetNote();
+  });
+
+  // Particle & Floating Animation Effects on Canvas
+  function createCelebrationBurst(x, y, text) {
+    floatingTexts.push({
+      x: x || canvasEl.width / 2,
+      y: y || canvasEl.height / 2,
+      text: text || "+100! 🎯",
+      alpha: 1.0,
+      vy: -1.8,
+      size: 26
+    });
+
+    const count = 30;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 6;
+      particles.push({
+        x: x || canvasEl.width / 2,
+        y: y || canvasEl.height / 2,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 3 + Math.random() * 3,
+        color: Math.random() > 0.4 ? '#e5a93b' : '#10b981',
+        life: 1.0,
+        decay: 0.02 + Math.random() * 0.02
+      });
+    }
+  }
+
+  function renderVisualEffects() {
+    // Render Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08; // gravity
+      p.life -= p.decay;
+
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Render Floating Text
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+      const ft = floatingTexts[i];
+      ft.y += ft.vy;
+      ft.alpha -= 0.02;
+
+      if (ft.alpha <= 0) {
+        floatingTexts.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, ft.alpha);
+      ctx.font = `bold ${ft.size}px Outfit, sans-serif`;
+      ctx.fillStyle = "#10b981";
+      ctx.shadowColor = "rgba(16, 185, 129, 0.8)";
+      ctx.shadowBlur = 10;
+      ctx.textAlign = "center";
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+    }
+  }
+
+  // Hand skeleton connection pairs
+  const HAND_CONNECTIONS = [
+    [0,1],[1,2],[2,3],[3,4],
+    [0,5],[5,6],[6,7],[7,8],
+    [5,9],[9,10],[10,11],[11,12],
+    [9,13],[13,14],[14,15],[15,16],
+    [13,17],[17,18],[18,19],[19,20],
+    [0,17]
+  ];
+
+  // ---- Hand Tracking & Smoothing Engine ----
+  let lastRightX = null, lastRightT = null;
+  let bowSpeedSmoothed = 0;
+  let leftPinch = false;
+  let lastFrameTime = performance.now();
+
+  function dist(a, b){
+    const dx = a.x - b.x, dy = a.y - b.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function onResults(results){
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - lastFrameTime) / 1000); // delta time in seconds
+    lastFrameTime = now;
+
+    canvasEl.width = videoEl.videoWidth || 640;
+    canvasEl.height = videoEl.videoHeight || 480;
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0){
+      badge.textContent = "No hands detected — raise hands into frame";
+      leftWristY_Filter.reset();
+      leftPinch_Filter.reset();
+      rightWristX_Filter.reset();
+      currentPlayedNote = null;
+      pitchLabel.textContent = "—";
+      pitchMeter.style.width = "0%";
+      bowLabel.textContent = "—";
+      bowMeter.style.width = "0%";
+      updateFingerboardActiveMarker();
+      fadeOut();
+      renderVisualEffects();
+      return;
+    }
+
+    let leftHand = null, rightHand = null;
+    results.multiHandLandmarks.forEach((lm, i) => {
+      const handedness = results.multiHandedness[i].label; // Left or Right
+      if (handedness === "Left") leftHand = lm;
+      else rightHand = lm;
+
+      // Draw skeleton connection lines
+      ctx.strokeStyle = handedness === "Left" ? "rgba(229, 169, 59, 0.6)" : "rgba(79, 209, 197, 0.6)";
+      ctx.lineWidth = 2.5;
+      HAND_CONNECTIONS.forEach(([p1, p2]) => {
+        if (lm[p1] && lm[p2]) {
+          ctx.beginPath();
+          ctx.moveTo(lm[p1].x * canvasEl.width, lm[p1].y * canvasEl.height);
+          ctx.lineTo(lm[p2].x * canvasEl.width, lm[p2].y * canvasEl.height);
+          ctx.stroke();
+        }
+      });
+
+      // Draw hand landmark nodes
+      lm.forEach((pt, ptIdx) => {
+        ctx.fillStyle = handedness === "Left" ? "#e5a93b" : "#4fd1c5";
+        ctx.beginPath();
+        const r = (ptIdx === 0 || ptIdx === 4 || ptIdx === 8) ? 5 : 3.5;
+        ctx.arc(pt.x * canvasEl.width, pt.y * canvasEl.height, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+
+    let statusParts = [];
+    let isBowing = false;
+    let handLeftX = canvasEl.width * 0.75, handLeftY = canvasEl.height * 0.5;
+
+    // 1. PITCH TRACKING with Moving Average Smoothing
+    if (leftHand) {
+      const rawWrist = leftHand[0];
+      handLeftX = rawWrist.x * canvasEl.width;
+      handLeftY = rawWrist.y * canvasEl.height;
+
+      // Apply Moving Average filter to smooth wrist Y height
+      const smoothedWristY = leftWristY_Filter.add(rawWrist.y);
+      const norm = 1 - Math.min(1, Math.max(0, smoothedWristY)); // 0 = bottom, 1 = top
+      
+      const pitchInfo = mapPitch(norm);
+      currentPlayedNote = pitchInfo;
+      
+      pitchMeter.style.width = (norm * 100).toFixed(0) + '%';
+      pitchLabel.textContent = `${pitchInfo.noteName} (${pitchInfo.freq.toFixed(0)} Hz)`;
+      
+      if (synth && soundReady) {
+        synth.frequency.rampTo(pitchInfo.freq, 0.04);
+      }
+
+      // Pinch mute detection with moving average smoothing
+      const rawPinchDist = dist(leftHand[4], leftHand[8]);
+      const smoothedPinchDist = leftPinch_Filter.add(rawPinchDist);
+      leftPinch = smoothedPinchDist < 0.055;
+      
+      statusParts.push(leftPinch ? "🔇 Muted (Pinch)" : `🎵 Pitch: ${pitchInfo.noteName}`);
+      updateFingerboardActiveMarker();
+    } else {
+      leftWristY_Filter.reset();
+      leftPinch_Filter.reset();
+      pitchLabel.textContent = "—";
+      pitchMeter.style.width = '0%';
+      currentPlayedNote = null;
+      updateFingerboardActiveMarker();
+      statusParts.push("Show Left Hand (Pitch)");
+    }
+
+    // 2. BOW / VOLUME TRACKING
+    if (rightHand) {
+      const rawWrist = rightHand[0];
+      const smoothedRightX = rightWristX_Filter.add(rawWrist.x);
+
+      if (lastRightX !== null && lastRightT !== null) {
+        const dtBow = (now - lastRightT) / 1000;
+        if (dtBow > 0.005) {
+          const rawSpeed = Math.abs(smoothedRightX - lastRightX) / dtBow;
+          bowSpeedSmoothed = bowSpeedSmoothed * 0.65 + rawSpeed * 0.35;
+        }
+      }
+      lastRightX = smoothedRightX;
+      lastRightT = now;
+
+      const bowIntensity = Math.min(1, bowSpeedSmoothed * 1.5);
+      bowMeter.style.width = (bowIntensity * 100).toFixed(0) + '%';
+      isBowing = bowIntensity > 0.05;
+      bowLabel.textContent = isBowing ? `Bowing (${(bowIntensity * 100).toFixed(0)}%)` : "Still";
+
+      if (synth && soundReady) {
+        let targetVol = -60;
+        if (!leftPinch && isBowing) {
+          const normalizedBow = (bowIntensity - 0.05) / 0.95;
+          targetVol = -36 + normalizedBow * 36; // -36 dB (soft) to 0 dB (full)
+        }
+        
+        synth.volume.rampTo(targetVol, 0.06);
+        if (filter) filter.frequency.rampTo(700 + bowIntensity * 3800, 0.08);
+
+        if (!noteOn && isBowing && !leftPinch) {
+          synth.triggerAttack(synth.frequency.value);
+          noteOn = true;
+        } else if (noteOn && (!isBowing || leftPinch)) {
+          noteOn = false;
+        }
+      }
+      statusParts.push(`🎻 Bow: ${(bowIntensity * 100).toFixed(0)}%`);
+    } else {
+      rightWristX_Filter.reset();
+      bowLabel.textContent = "—";
+      bowMeter.style.width = '0%';
+      lastRightX = null;
+      lastRightT = null;
+      isBowing = false;
+      fadeOut();
+      statusParts.push("Show Right Hand (Bow)");
+    }
+
+    // 3. GAME MODE LOGIC: "Match the Note"
+    if (appMode === 'game' && currentTarget) {
+      handleGameMatch(dt, isBowing, handLeftX, handLeftY);
+    }
+
+    badge.textContent = statusParts.join(" · ");
+    renderVisualEffects();
+  }
+
+  function handleGameMatch(dt, isBowing, handX, handY) {
+    if (!currentPlayedNote || leftPinch) {
+      matchProgress = Math.max(0, matchProgress - dt * 2.5);
+      targetProgressFill.style.width = (matchProgress * 100) + '%';
+      targetHud.classList.remove('matching');
+      pitchFeedbackText.textContent = `Target: ${currentTarget.noteName}`;
+      pitchArrow.textContent = "🎯";
+      return;
+    }
+
+    // Check pitch match (exact note name match or close MIDI distance)
+    const isPitchMatched = (currentPlayedNote.midi === currentTarget.midi || currentPlayedNote.noteName === currentTarget.noteName);
+    
+    // Visual tuner feedback
+    if (isPitchMatched) {
+      pitchArrow.textContent = "✨";
+      pitchFeedbackText.textContent = `Matched ${currentTarget.noteName}! Bow to hold!`;
+    } else if (currentPlayedNote.midi < currentTarget.midi) {
+      pitchArrow.textContent = "⬆️";
+      pitchFeedbackText.textContent = `Raise hand higher for ${currentTarget.noteName}`;
+    } else {
+      pitchArrow.textContent = "⬇️";
+      pitchFeedbackText.textContent = `Lower hand for ${currentTarget.noteName}`;
+    }
+
+    if (isPitchMatched && (isBowing || !soundReady)) {
+      targetHud.classList.add('matching');
+      matchProgress += dt / MATCH_HOLD_TIME_SEC;
+      targetProgressFill.style.width = Math.min(100, matchProgress * 100) + '%';
+
+      if (matchProgress >= 1.0) {
+        // MATCH SUCCESS!
+        streak++;
+        const points = 100 + (streak > 1 ? (streak - 1) * 25 : 0);
+        score += points;
+        if (score > bestScore) bestScore = score;
+
+        scoreVal.textContent = score;
+        streakVal.textContent = `${streak}x 🔥`;
+        bestScoreVal.textContent = bestScore;
+
+        playSuccessChime(currentTarget.midi);
+        createCelebrationBurst(handX, handY, `+${points}! 🎯`);
+
+        pickNewTargetNote();
+      }
+    } else {
+      matchProgress = Math.max(0, matchProgress - dt * 2.0);
+      targetProgressFill.style.width = (matchProgress * 100) + '%';
+      targetHud.classList.remove('matching');
+    }
+  }
+
+  function fadeOut(){
+    if (synth && soundReady){
+      synth.volume.rampTo(-60, 0.25);
+      noteOn = false;
+    }
+  }
+
+  // ---- Simulator Support for Quick Testing & Headless Verification ----
+  function simulatePitch(midi) {
+    const freq = midiToFreq(midi);
+    const name = midiToNoteName(midi);
+    currentPlayedNote = { midi, noteName: name, freq };
+    pitchLabel.textContent = `${name} (${freq.toFixed(0)} Hz)`;
+    
+    const mode = scaleSelect.value;
+    const notes = scales[mode] || scales.major;
+    const idx = notes.indexOf(midi);
+    if (idx >= 0) {
+      const norm = idx / (notes.length - 1);
+      pitchMeter.style.width = (norm * 100).toFixed(0) + '%';
+    }
+
+    if (synth && soundReady) {
+      synth.frequency.rampTo(freq, 0.05);
+    }
+
+    updateFingerboardActiveMarker();
+
+    // Trigger game matching check if active
+    if (appMode === 'game' && currentTarget) {
+      handleGameMatch(0.4, true, canvasEl.width / 2, canvasEl.height / 2);
+    }
+  }
+
+  function simulatePitchAndBow(midi) {
+    simulatePitch(midi);
+    bowLabel.textContent = "Bowing (Simulated)";
+    bowMeter.style.width = "85%";
+    
+    if (synth && soundReady) {
+      synth.volume.rampTo(-6, 0.08);
+      if (!noteOn) {
+        synth.triggerAttack(synth.frequency.value);
+        noteOn = true;
+      }
+    }
+
+    // Simulate match completion directly
+    if (appMode === 'game' && currentTarget) {
+      if (midi === currentTarget.midi || midiToNoteName(midi) === currentTarget.noteName) {
+        streak++;
+        const points = 100 + (streak > 1 ? (streak - 1) * 25 : 0);
+        score += points;
+        if (score > bestScore) bestScore = score;
+
+        scoreVal.textContent = score;
+        streakVal.textContent = `${streak}x 🔥`;
+        bestScoreVal.textContent = bestScore;
+
+        playSuccessChime(currentTarget.midi);
+        createCelebrationBurst(canvasEl.width / 2, canvasEl.height / 2, `+${points}! 🎯`);
+        pickNewTargetNote();
+      }
+    }
+
+    setTimeout(() => {
+      bowMeter.style.width = "0%";
+      bowLabel.textContent = "—";
+      fadeOut();
+    }, 600);
+  }
+
+  // Keyboard shortcut listener (keys 1-8 for quick pitch notes)
+  window.addEventListener('keydown', (e) => {
+    const key = parseInt(e.key);
+    if (key >= 1 && key <= 8) {
+      const mode = scaleSelect.value;
+      const notes = scales[mode] || scales.major;
+      if (notes[key - 1]) {
+        simulatePitchAndBow(notes[key - 1]);
+      }
+    }
+  });
+
+  // ---- Camera & MediaPipe Initialization ----
+  let hands, camera;
+
+  startBtn.addEventListener('click', async () => {
+    startBtn.disabled = true;
+    startBtn.textContent = "Starting Camera…";
+    try {
+      hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+      hands.setOptions({
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.5
+      });
+      hands.onResults(onResults);
+
+      camera = new Camera(videoEl, {
+        onFrame: async () => {
+          if (videoEl && videoEl.readyState >= 2) {
+            await hands.send({ image: videoEl });
+          }
+        },
+        width: 640,
+        height: 480
+      });
+      await camera.start();
+
+      badge.textContent = "Camera running — raise your hands";
+      startBtn.textContent = "📷 Camera Running";
+      soundBtn.disabled = false;
+      statusEl.innerHTML = "✅ <strong>Camera running!</strong> Now click <strong>Enable Sound</strong> to hear your violin.";
+    } catch(err) {
+      console.error(err);
+      badge.textContent = "Camera error: " + (err && err.message ? err.message : err);
+      startBtn.disabled = false;
+      startBtn.textContent = "📷 Start Camera";
+      statusEl.innerHTML = `⚠️ <em>Camera access notice:</em> ${err.message || err}. You can also use the interactive simulator controls below!`;
+    }
+  });
+
+  // Initialize UI on load
+  pickNewTargetNote();
+  updateFingerboardGuide();
+  setAppMode('game');
+})();
+</script>
+</body>
+</html>
